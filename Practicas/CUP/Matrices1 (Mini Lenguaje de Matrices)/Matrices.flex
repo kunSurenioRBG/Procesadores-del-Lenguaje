@@ -1,6 +1,20 @@
 import java_cup.runtime.*;
 
 %%
+
+%line
+%column
+
+%{
+
+    public int getLine(){
+        return yyline;
+    }
+    public int getColumn(){
+        return yycolumn;
+    }
+%}
+
 %cup
 
 %%

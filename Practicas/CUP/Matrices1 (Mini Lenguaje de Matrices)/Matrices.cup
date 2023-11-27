@@ -1,0 +1,155 @@
+//http://lab.antlr.org/             //check grammars
+
+import java_cup.runtime.*;
+import java.util.ArrayList;
+
+// (Uncomment) -> Show line where the error was
+*/
+parser code {:
+
+    public void syntax_error(Symbol cur_token){
+    }
+
+    public void unrecovered_syntax_error(Symbol cur_token){
+        System.err.println("Syntax error en linea" + Matrices.lex.getLine() + ", columna " + Matrices.lex.getColumn() + " con el token "+ sym.terminalNames[cur_token.sym]);
+        // report_error("Syntax error", null);
+        done_parsing();
+    }
+
+
+:}
+*/
+
+action code{:
+    ArrayList<ArrayList<Double>> filas = new ArrayList<>();
+    ArrayList<Double> fila = new ArrayList<>();
+
+    double[][] matriz;
+
+    public void error(int id) {
+        switch (id) {
+            case 1 :
+                System.out.println(Matrices.ERROR_FILAS);
+                break;
+            
+            case 2 :
+                System.out.println(Matrices.ERROR_INVERSA);
+                break;
+
+            case 3 :
+                System.out.println(Matrices.ERROR_ADJUNTA);
+                break;
+                
+            case 4 :
+                System.out.println(Matrices.ERROR_PROD);
+                break;
+                
+            case 5 :
+                System.out.println(Matrices.ERROR_SUMA);
+                break;
+            
+            case 6 :
+                System.out.println(TablaSimbolos.ERROR_NOEXISTE);
+                break;
+            
+            default:
+                System.out.println("Error desconocido");
+                break;
+        }
+    }
+
+    public double[][] crearMatriz(ArrayList<ArrayList<Double>> filas) {
+        double[][] matriz = null;
+        
+        try {
+            matriz = Matrices.toArray(filas);
+            
+        } catch (Exception e) {
+            error(1);
+        }
+        
+        return matriz;
+    }
+
+    public boolean cuadrada(double[][] matriz) {
+        return Matrices.filas(matriz) == Matrices.columnas(matriz);
+    }
+
+    public boolean sumables(double[][] matrizA, double[][] matrizB) {
+        return Matrices.filas(matrizA) == Matrices.filas(matrizB) && Matrices.columnas(matrizA) == Matrices.columnas(matrizB);
+    }
+
+    public boolean multiplicables(double[][] matrizA, double[][] matrizB) {
+        return Matrices.columnas(matrizA) == Matrices.filas(matrizB);
+    }
+
+:}
+
+//terminals
+terminal String IDENT;                              //variables
+terminal double NUMERO;                             //numero
+terminal ALL, CLL, AP, CP, AC, CC;                  //(),[],{} aperturas y cierres
+terminal COMA, PYC, ASIG;                           //simbolos de separacion
+terminal MAS, MENOS, POR, DIV;                      //Operaciones
+terminal PRINT, INVERSA, TRANSPUESTA, ADJUNTA;       //Funciones Matriciales
+
+//non-terminals
+non terminal definicion;
+non terminal lineas, linea;
+non terminal filas, fila;
+non terminal double[][] matriz;
+non terminal double[][] funcion;  
+non terminal double[][] argumento;
+
+//precedences (prio from lower to up)
+precedence left PRINT;
+precedence left IDENT;
+precedence left INVERSA, TRANSPUESTA, ADJUNTA;
+precedence left COMA;
+precedence left MAS, MENOS;
+precedence left POR, DIV;
+precedence left AP, CP;
+precedence left AC, CC;
+precedence left ALL, CLL;
+
+//Grammar (prio lineas)
+lineas::= lineas linea                              // reading command lines from document
+        | linea
+        ;
+
+linea::= funcion PYC
+        |definicion PYC
+        ;         
+
+funcion::= PRINT AP argumento:m CP                   {: if (m != null)                                       {Matrices.print(m);                             }:}
+            |TRANSPUESTA AP argumento:m CP           {: if (m != null)                                       {matriz = Matrices.transpuesta(m);              }:}
+            |INVERSA AP argumento:m CP               {: if (m != null && cuadrada(m))                        {matriz = Matrices.inversa(m);                  } else {error(2);} :}
+            |ADJUNTA AP argumento:m CP               {: if (m != null && cuadrada(m))                        {matriz = Matrices.adjunta(m);                  } else {error(3);} :}
+        ;
+
+definicion::= IDENT:ident ASIG argumento:a          {: TablaSimbolos.insertar(ident,a); :}
+        ;
+
+argumento::= matriz                                  {: RESULT = matriz; :}
+            |funcion                                 {: RESULT = matriz; :}
+            |argumento:a MAS argumento:b             {: if(sumables(a,b))                                    {matriz = Matrices.suma(a, b);                          RESULT = matriz;        } else {error(5);} :}
+            |argumento:a MENOS argumento:b           {: if(sumables(a,b))                                    {matriz = Matrices.suma(a,Matrices.producto(-1,b));     RESULT = matriz;        } else {error(5);} :}
+            |argumento:a POR argumento:b             {: if(multiplicables(a,b))                              {matriz = Matrices.producto(a,b);                       RESULT = matriz;        } else {error(4);} :}
+            |argumento:a DIV argumento:b             {: if(multiplicables(a,b))                              {matriz = Matrices.producto(a, Matrices.inversa(b));    RESULT = matriz;        } else {error(4);} :}   
+            |IDENT:a                                 {: RESULT = TablaSimbolos.buscar(a); :}
+            |AP argumento:a CP                       {: RESULT = a; :}
+        ;
+
+matriz::= AC filas CC                               {: matriz = crearMatriz(filas);     filas.clear(); :}
+        |ALL filas CLL                              {: matriz = crearMatriz(filas);     filas.clear(); :}
+        ;
+
+filas::= filas PYC fila                             {: filas.add((ArrayList<Double>)    fila.clone());     fila.clear(); :}
+        | fila                                      {: filas.add((ArrayList<Double>)    fila.clone());     fila.clear(); :}
+        | filas COMA ALL fila CLL                   {: filas.add((ArrayList<Double>)    fila.clone());     fila.clear(); :}
+        | ALL fila CLL                              {: filas.add((ArrayList<Double>)    fila.clone());     fila.clear(); :}
+        ;
+
+fila::= fila COMA NUMERO:n                          {: fila.add(new Double(n)); :}
+        | NUMERO:n                                  {: fila.add(new Double(n)); :}
+        ;
