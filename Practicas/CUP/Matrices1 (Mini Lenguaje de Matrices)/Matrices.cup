@@ -4,7 +4,8 @@ import java_cup.runtime.*;
 import java.util.ArrayList;
 
 // (Uncomment) -> Show line where the error was
-*/
+
+/*
 parser code {:
 
     public void syntax_error(Symbol cur_token){
