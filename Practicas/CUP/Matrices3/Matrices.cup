@@ -1,0 +1,111 @@
+import java_cup.runtime.*;
+import java.util.ArrayList;
+
+// (Uncomment) -> Show line where the error was
+/*
+parser code {:
+
+    public void syntax_error(Symbol cur_token){
+    }
+
+    public void unrecovered_syntax_error(Symbol cur_token){
+        System.err.println("Syntax error en linea " + Matrices.lex.getLine() + ", columna " + Matrices.lex.getColumn() + " con el token "+ sym.terminalNames[cur_token.sym]);
+        // report_error("Syntax error", null);
+        done_parsing();
+    }
+
+
+:}
+*/
+
+action code{:
+    //ArrayList<ArrayList<Double>> filas = new ArrayList<>();   //no usamos en este ejercicio porque no tenemos varias filas de seguido
+    ArrayList<Double> fila = new ArrayList<>();
+:};
+
+//terminals
+terminal String IDENT;                                                                      //variables
+terminal Double NUMERO;                                                                     //numero
+terminal ALL, CLL, AP, CP, AC, CC;                                                          //(),[],{} aperturas y cierres
+terminal COMA, PYC, ASIG;                                                                   //simbolos de separacion
+terminal MAS, MENOS, POR, DIV;                                                              //Operaciones
+terminal PRINT, INVERSA, TRANSPUESTA, ADJUNTA, CONCATENA, INTERSECCION;                     //Funciones Matriciales
+terminal SET;                                                                               //Funcion para conjuntos
+terminal double[][] MATRIZ;                                                                 //Matrices
+terminal double[]   VECTOR;                                                                 //Vectores
+terminal double[]   CONJUNTO;                                                               //Conjuntos
+terminal MENOSUNARIO;                                                                       //Numeros Negativos
+
+//non-terminals
+non terminal lineas,linea;
+non terminal definicion;
+non terminal funcion;
+non terminal double[] vector;
+non terminal double[] conjunto;
+non terminal fila;
+non terminal Double numero;
+
+
+//precedences
+precedence left PRINT;
+precedence left IDENT;
+precedence left INVERSA, TRANSPUESTA, ADJUNTA;
+precedence left COMA;
+precedence left MAS, MENOS;
+precedence left POR, DIV;
+precedence left CONCATENA;
+precedence left INTERSECCION;
+precedence left AP, CP;
+precedence left AC, CC;
+precedence left ALL, CLL;
+precedence left MENOSUNARIO;
+
+
+//Grammar
+lineas::= lineas linea                                              // reading command lines from document
+        | linea
+        ;
+
+linea::= definicion PYC
+        |funcion PYC
+        ;
+
+definicion::= IDENT:ident ASIG vector:v                             {: TablaSimbolos.insertarVector(ident, v); :}
+        |IDENT:ident ASIG conjunto:c                                {: TablaSimbolos.insertarConjunto(ident, c); :}
+        ;
+
+funcion::= PRINT AP conjunto:c CP                                   {: Matrices.print(c); :}
+        |  PRINT AP vector:v CP                                     {: Matrices.print(v); :}
+        ;
+
+vector::= ALL fila CLL                                              {: RESULT = Matrices.toVector(fila);    fila.clear(); :}
+        |VECTOR:v                                                   {: RESULT = v; :}
+        |vector:v1 CONCATENA vector:v2                              {: RESULT = Matrices.concatena(v1, v2); :}
+        |vector:v1 CONCATENA numero:n                               {: RESULT = Matrices.concatena(v1, n); :}
+        |numero:n CONCATENA vector:v2                               {: RESULT = Matrices.concatena(n, v2); :}
+        |vector:v1 MAS vector:v2                                    {: if (Matrices.dim(v1) == Matrices.dim(v2)) { RESULT = Matrices.suma(v1, v2); } else { System.out.println(Matrices.ERROR_SUMA); System.exit(-1);} :}
+        |vector:v1 CONCATENA conjunto:c1                            {: RESULT = Matrices.concatena(v1, c1); :}
+        |conjunto:c1 CONCATENA vector:v1                            {: RESULT = Matrices.concatena(c1, v1); :}
+        |vector:v1 INTERSECCION conjunto:c1                         {: RESULT = Matrices.interseccion(v1, c1); :}
+        |conjunto:c1 INTERSECCION vector:v1                         {: RESULT = Matrices.interseccion(c1, v1); :}
+        |AP vector:v CP                                             {: RESULT = v; :}
+        |vector:v1 INTERSECCION vector:v2                           {: RESULT = Matrices.interseccion(v1, v2); :}
+        ;
+
+conjunto::= SET vector:v                                            {: RESULT = Matrices.toSet(v);    fila.clear();    :}
+        |SET conjunto:c                                             {: RESULT = c; :}
+        |CONJUNTO:c                                                 {: RESULT = c; :}
+    //Para UNION, se cumple si concateno (SOLO CUANDO SON DOS CONJUNTOS)
+        |conjunto:c1 CONCATENA conjunto:c2                          {: RESULT = Matrices.union(c1, c2); :}
+        |conjunto:c1 INTERSECCION conjunto:c2                       {: RESULT = Matrices.interseccion(c1, c2); :}
+        |AP conjunto:c CP                                           {: RESULT = c; :}
+        ;
+
+fila::= fila COMA numero:n                                          {: fila.add(new Double(n)); :}
+        |numero:n                                                   {: fila.add(new Double(n)); :}
+        ;
+
+numero::= NUMERO:a                                                  {: RESULT = a; :}
+        | MENOS NUMERO:a                                            {: RESULT = -a; :}
+        %prec MENOSUNARIO
+        ;
