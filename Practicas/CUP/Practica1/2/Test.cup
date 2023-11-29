@@ -1,0 +1,19 @@
+import java_cup.runtime.*;
+
+terminal String IDENT;
+terminal INT, DOUBLE, PYC;
+
+non terminal String linea, doble, integer;
+non terminal listaExp;
+
+listaExp ::= listaExp linea:l   {: System.out.println(l); :}
+            | linea:l           {: System.out.println(l); :};
+
+linea ::= DOUBLE doble:d     {: RESULT = d; :}
+        | INT integer:i      {: RESULT = i; :};
+
+doble ::= IDENT:id doble:d      {: RESULT = " " + id + ":double;" + d; :}
+        | PYC                   {: RESULT = ""; :};
+
+integer ::= IDENT:id integer:i      {: RESULT = " " + id + ":int;" + i; :}
+        | PYC                       {: RESULT = ""; :};

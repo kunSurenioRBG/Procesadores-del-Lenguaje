@@ -1,0 +1,17 @@
+import java_cup.runtime.*;
+
+terminal String IDENT;
+terminal String NUMERO;
+
+non terminal String linea;
+non terminal listaExp;
+
+precedence right IDENT, NUMERO;
+
+listaExp ::= listaExp linea:l   {: System.out.println(l); :}
+            | linea:l           {: System.out.println(l); :};
+
+linea ::= linea:s IDENT:id      {: RESULT = id + " " + s; :}
+        | linea:s NUMERO:n      {: RESULT = n + " " + s; :}
+        | IDENT:id              {: RESULT = id + " "; :}
+        | NUMERO:n              {: RESULT = n + " "; :};
