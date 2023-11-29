@@ -1,0 +1,16 @@
+import java_cup.runtime.*;
+
+terminal DOUBLE, INT, PYC, COMA, DP;
+terminal String IDENT;
+
+non terminal lineaExp;
+non terminal String exp, valores;
+
+lineaExp ::= lineaExp exp:s     {: System.out.println(s); :}
+            | exp:s             {: System.out.println(s); :};
+
+exp ::= valores:v DOUBLE PYC    {: RESULT = "double " + v + ";"; :}
+    | valores:v INT PYC         {: RESULT = "int " + v + ";"; :};
+
+valores ::= IDENT:n COMA valores:res   {: RESULT = n + ", " + res; :}
+        | IDENT:n DP                   {: RESULT = n; :};

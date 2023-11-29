@@ -1,0 +1,3 @@
+x: int;
+a, b, c: int;
+p,q: double;

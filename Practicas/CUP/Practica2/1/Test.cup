@@ -1,0 +1,21 @@
+import java_cup.runtime.*;
+
+/*{: System.out.println(n1 + " + " n2 " = " + n1+n2); :}
+{: System.out.println("(" + n3 + ")"):}*/
+
+terminal Integer NUMERO;
+non terminal String exp;
+non terminal listaExp;
+
+precedence left NUMERO;
+
+listaExp ::= listaExp exp:s     {: System.out.println(s); :}
+            | exp               {: :};
+
+exp ::= NUMERO:n1 NUMERO:n2 NUMERO:n3 exp:s {:  if(n1 + n2 != n3 || s == "NO"){
+                                                    RESULT = "NO";
+                                                }else{
+                                                    RESULT = "SI";
+                                                } :}
+        | NUMERO NUMERO                         {: RESULT = "SI"; :}
+        | NUMERO                                {: RESULT = "SI"; :};
