@@ -1,0 +1,194 @@
+import java_cup.runtime.*;
+import java.util.ArrayList;
+
+// (Uncomment) -> Show line where the error was
+/*
+parser code {:
+
+    public void syntax_error(Symbol cur_token){
+    }
+
+    public void unrecovered_syntax_error(Symbol cur_token){
+        System.err.println("Syntax error en linea" + Matrices.lex.getLine() + ", columna " + Matrices.lex.getColumn() + " con el token "+ sym.terminalNames[cur_token.sym]);
+        // report_error("Syntax error", null);
+        done_parsing();
+    }
+
+
+:}
+*/
+
+action code{:
+    ArrayList<ArrayList<Double>> filas = new ArrayList<>();
+    ArrayList<Double> fila = new ArrayList<>();
+:};
+
+//terminals
+terminal String IDENT;                                                   //variables
+terminal Double NUMERO;                                                  //numero
+terminal ALL, CLL, AP, CP, AC, CC;                                       //(),[],{} aperturas y cierres
+terminal COMA, PYC, ASIG;                                                //simbolos de separacion
+terminal MAS, MENOS, POR, DIV;                                           //Operaciones
+terminal PRINT, INVERSA, TRANSPUESTA, ADJUNTA, CONCATENA;                //Funciones Matriciales
+terminal double[][] MATRIZ;                                              //Matrices
+terminal double[]   VECTOR;                                              //Vectores
+terminal MENOSUNARIO;                                                    //Numeros Negativos
+
+//non-terminals
+non terminal definicion;
+non terminal funcion;
+non terminal lineas, linea;
+non terminal filas, fila;
+non terminal double[] vector;
+non terminal double[][] matriz;
+non terminal Double numero;
+
+//precedences (prio from lower to up)
+precedence left PRINT;
+precedence left IDENT;
+precedence left INVERSA, TRANSPUESTA, ADJUNTA;
+precedence left COMA;
+precedence left MAS, MENOS;
+precedence left POR, DIV;
+precedence left CONCATENA;
+precedence left AP, CP;
+precedence left AC, CC;
+precedence left ALL, CLL;
+precedence left MENOSUNARIO;
+
+//Grammar (prio lineas)
+lineas::= lineas linea                                              // reading command lines from document
+        | linea
+        ;
+linea::= definicion PYC
+        |funcion PYC
+        ;
+
+definicion::=  IDENT:ident ASIG matriz:a                                    {: TablaSimbolos.insertar(ident, a); :}
+        |      IDENT:ident ASIG vector:a                                    {: TablaSimbolos.insertarVector(ident, a); :}
+        |      IDENT:ident AP NUMERO:n1 COMA NUMERO:n2 CP ASIG matriz:m      {:
+                                                                            TablaSimbolos.insertar(ident,
+                                                                            Matrices.completar(m,n1.intValue(),n2.intValue()));
+                                                                            :}
+        ;
+
+funcion::=  PRINT AP matriz:a CP                                    {: Matrices.print(a); :}
+        |   PRINT AP vector:a CP                                    {: Matrices.print(a); :}
+        ;
+
+matriz::= ALL filas CLL                                             {:
+                                                                    try {
+                                                                    RESULT = Matrices.toArray(filas);
+                                                                    } catch (Exception e) {
+                                                                    System.out.println(Matrices.ERROR_FILAS);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    filas.clear();
+                                                                    :}
+        | MATRIZ:m                                                  {: RESULT = m; :}
+        | AC filas CC                                               {:
+                                                                    try {
+                                                                    RESULT = Matrices.toArray(filas);
+                                                                    } catch (Exception e) {
+                                                                    System.out.println(Matrices.ERROR_FILAS);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    filas.clear();
+                                                                    :}
+        | AP matriz:m CP                                            {: RESULT = m; :}
+        | matriz:m CONCATENA vector:v                               {: RESULT = Matrices.concatena(m,v);    :}
+        | matriz:m CONCATENA numero:n                               {: RESULT = Matrices.concatena(m,n);    :}
+        | matriz:m POR vector:v                                     {: RESULT = Matrices.producto(m,v);     :}
+        | vector:v POR matriz:m                                     {: RESULT = Matrices.producto(v,m);     :}
+        | matriz:m1 MAS matriz:m2
+                                                                    {:  
+                                                                    if (Matrices.filas(m1) == Matrices.filas(m2) &&
+                                                                    Matrices.columnas(m1) == Matrices.columnas(m2)) {
+                                                                    RESULT = Matrices.suma(m1,m2);
+                                                                    } else {
+                                                                    System.out.println(Matrices.ERROR_SUMA);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    :}
+        | matriz:m1 MENOS matriz:m2
+                                                                    {:
+                                                                    if (Matrices.filas(m1) == Matrices.filas(m2) &&
+                                                                    Matrices.columnas(m1) == Matrices.columnas(m2)) {
+                                                                    RESULT = Matrices.suma(m1, Matrices.producto(-1,
+                                                                    m2));
+                                                                    } else {
+                                                                    System.out.println(Matrices.ERROR_SUMA);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    :}
+        | matriz:m1 POR matriz:m2
+                                                                    {:
+                                                                    if (Matrices.columnas(m1) == Matrices.filas(m2)) {
+                                                                    RESULT = Matrices.producto(m1,m2);
+                                                                    } else {
+                                                                    System.out.println(Matrices.ERROR_PROD);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    :}
+        | matriz:m1 DIV matriz:m2
+                                                                    {:
+                                                                    if (Matrices.columnas(m1) == Matrices.filas(m2)) {
+                                                                    RESULT = Matrices.producto(m1, Matrices.inversa(m2));
+                                                                    } else {
+                                                                    System.out.println(Matrices.ERROR_PROD);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    :}
+        | INVERSA AP matriz:m CP
+                                                                    {:
+                                                                    if (Matrices.filas(m) == Matrices.columnas(m)) {
+                                                                    RESULT = Matrices.inversa(m);
+                                                                    } else {
+                                                                    System.out.println(Matrices.ERROR_INVERSA);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    :}
+        | TRANSPUESTA AP matriz:m CP                                {: RESULT = Matrices.transpuesta(m); :}
+        | ADJUNTA AP matriz:m CP
+                                                                    {:
+                                                                    if (Matrices.filas(m) == Matrices.columnas(m)) {
+                                                                    RESULT = Matrices.adjunta(m);
+                                                                    } else {
+                                                                    System.out.println(Matrices.ERROR_ADJUNTA);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    :}
+        | vector:v1 POR vector:v2                                   {: RESULT = Matrices.producto(v1,v2);:}
+        | MATRIZ:m AP NUMERO:n1 COMA NUMERO:n2 CP
+                                                                    {:
+                                                                    if (n1 > Matrices.filas(m)) {
+                                                                    System.out.println(Matrices.ERROR_FILAS_INSUF);
+                                                                    System.exit(-1);
+                                                                    } else if (n2 > Matrices.columnas(m)) {
+                                                                    System.out.println(Matrices.ERROR_COLUM_INSUF);
+                                                                    System.exit(-1);
+                                                                    }
+                                                                    RESULT = Matrices.subMatriz(m,n1.intValue(),n2.intValue());
+                                                                    :}
+        ;
+
+vector::= ALL fila CLL                                              {: RESULT = Matrices.toVector(fila);    fila.clear(); :}
+        |VECTOR:v                                                   {: RESULT = v; :}
+        |vector:v1 CONCATENA vector:v2                              {: RESULT = Matrices.concatena(v1, v2); :}
+        |vector:v1 CONCATENA numero:n                               {: RESULT = Matrices.concatena(v1, n); :}
+        |numero:n CONCATENA vector:v2                               {: RESULT = Matrices.concatena(n, v2); :}
+        |vector:v1 MAS vector:v2                                    {: if (Matrices.dim(v1) == Matrices.dim(v2)) { RESULT = Matrices.suma(v1, v2); } else { System.out.println(Matrices.ERROR_SUMA); System.exit(-1);} :}
+        ;
+    
+filas::= filas COMA vector:a                                        {: filas.add(Matrices.toArrayList(a));     fila.clear(); :}
+        | vector:a                                                  {: filas.add(Matrices.toArrayList(a));     fila.clear(); :}
+        ;
+
+fila::= fila COMA numero:n                                          {: fila.add(new Double(n)); :}
+        | numero:n                                                  {: fila.add(new Double(n)); :}
+        ;
+
+numero::= NUMERO:a                                                  {: RESULT = a; :}
+        | MENOS NUMERO:a                                            {: RESULT = -a; :}
+        %prec MENOSUNARIO
+        ;
