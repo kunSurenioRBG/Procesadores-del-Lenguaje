@@ -1,0 +1,85 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+
+// (Uncomment) -> Show line where the error was
+/*
+parser code {:
+
+    public void syntax_error(Symbol cur_token){
+    }
+
+    public void unrecovered_syntax_error(Symbol cur_token){
+        System.err.println("Syntax error en linea " + Cadenas.lex.getLine() + ", columna " + Cadenas.lex.getColumn() + " con el token "+ sym.terminalNames[cur_token.sym]);
+        // report_error("Syntax error", null);
+        done_parsing();
+    }
+
+
+:}
+*/
+
+
+
+action code{:
+    public HashMap<String, String> tabla = new HashMap<>();
+
+    public String buscar(String id) {
+        return tabla.get(id);
+    }
+
+    public void insertar(String id, String cadena) {
+        tabla.put(id, cadena);
+    }
+:};
+
+//terminals
+terminal MAS, MENOS, IGUAL;
+terminal AP, CP, PYC, PUNTO, COMA;
+terminal PRINT;
+terminal SUBSTR, SIZE;
+terminal String CADENA, ID;
+terminal Integer NUMERO;
+
+//non-terminals
+non terminal lineas, linea;
+non terminal definicion;
+non terminal funcion;
+non terminal String cadena;
+non terminal Integer tam;
+
+//precedences 
+precedence left PRINT;
+precedence left ID, CADENA;
+precedence left MAS, MENOS;
+precedence left COMA;
+precedence left PYC;
+precedence left PUNTO, SUBSTR;
+precedence left AP, CP;
+
+//Grammar
+lineas::= lineas linea
+        | linea
+        ;
+
+linea::= definicion PYC
+        |funcion PYC
+        ;
+
+definicion::= ID:id IGUAL cadena:c                          {: insertar(id, c); :}
+        ;
+
+funcion::= PRINT AP cadena:c CP                             {: System.out.println(c); :} 
+        ;
+
+cadena::= CADENA:c                                          {: RESULT = c; :}
+        |ID:id                                              {: RESULT = buscar(id); :}
+        |cadena:c1 MAS cadena:c2                            {: RESULT = c1 + c2; :}
+        |cadena:c PUNTO SUBSTR AP tam:n1 COMA tam:n2 CP     {: RESULT = new String(c.substring(n1,n2+n1)); :}
+        |AP cadena:c CP                                     {: RESULT = c; :}
+        ;
+
+tam::= NUMERO:n                                             {: RESULT = n; :}
+        |cadena:c PUNTO SIZE AP CP                          {: RESULT = c.length(); :}
+        |tam:n1 MENOS tam:n2                                {: RESULT = n1 - n2; :}
+        |tam:n1 MAS tam:n2                                  {: RESULT = n1 + n2; :}
+        ;
