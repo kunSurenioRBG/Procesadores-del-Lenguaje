@@ -1,0 +1,78 @@
+import java_cup.runtime.*;
+import java.lang.Math;
+
+// (Uncomment) -> Show line where the error was
+/*
+parser code {:
+
+    public void syntax_error(Symbol cur_token){
+    }
+
+    public void unrecovered_syntax_error(Symbol cur_token){
+        System.err.println("Syntax error en linea " + Arbol.lex.getLine() + ", columna " + Arbol.lex.getColumn() + " con el token "+ sym.terminalNames[cur_token.sym]);
+        // report_error("Syntax error", null);
+        done_parsing();
+    }
+
+
+:}
+*/
+
+action code {:
+    Arbol a = null;
+:};
+
+//terminals 
+terminal ALL, CLL, COMA;
+terminal Integer NUMERO;
+
+//non terminals 
+non terminal lineas;
+non terminal Arbol rama;
+
+//precedences
+
+
+//grammar
+lineas::= rama:a                                                  {: System.out.println(a); :}
+        ;
+
+rama::= ALL rama:izq COMA NUMERO:r COMA rama:der CLL              {: a = new Arbol();
+                                                                    a.raiz = r;
+                                                                    a.maximo = Math.max(r, Math.max(izq.maximo, der.maximo)); 
+                                                                    a.profundidad = 1 + Math.max(izq.profundidad, der.profundidad);
+                                                                    a.elementos = 1 + izq.elementos + der.elementos;
+                                                                    a.sumaNivel[0] = r;
+                                                                        int i = 1;
+                                                                        while (i <= a.profundidad-1) {
+                                                                            a.sumaNivel[i] = 0;
+                                                                    
+                                                                            if (izq.sumaNivel[i=1] != null) {
+                                                                                a.sumaNivel[i] += izq.sumaNivel[i-1];
+                                                                            }
+                                                                    
+                                                                            if (der.sumaNivel[i-1] != null) {
+                                                                                a.sumaNivel[i] += der.sumaNivel[i-1];
+                                                                            }
+                                                                    
+                                                                            i++;
+                                                                        }
+                                                                    
+                                                                    a.arbolInverso = "{" + der.arbolInverso + "," + r + "," + izq.arbolInverso + "}";
+
+                                                                    a.grafo = r + " -> {" + izq.raiz + "," + der.raiz + "}; ";
+                                                                    a.grafo = izq.grafo + a.grafo + der.grafo;
+                                                                
+                                                                    RESULT = a;
+                                                                    :}
+
+        |NUMERO:n                                                {: a = new Arbol();
+                                                                    a.raiz = n;
+                                                                    a.maximo = n;
+                                                                    a.profundidad = 1;
+                                                                    a.elementos = 1;
+                                                                    a.sumaNivel[0] = a.raiz;
+                                                                    a.arbolInverso = n.toString();
+                                                                    RESULT = a;
+                                                                 :}
+        ;
